@@ -29,13 +29,6 @@ def myGreaterThan (n1 : MyNat) (n2 : MyNat) : Bool :=
   | MyNat.zero => false
   | MyNat.succ _ => true
 
-example (n1 : MyNat) (n2 : MyNat) : ((n1 = MyNat.zero) ∧ (n2 = MyNat.zero)) → n1 = n2 := by
-  intro h1
-  cases h1 with
-  | intro hl hr =>
-    rw [hl, hr]
-
-
 theorem add_zero (n : MyNat) : myAdd n MyNat.zero = n := by
   match n with
   | MyNat.zero => rw [myAdd]
@@ -43,15 +36,33 @@ theorem add_zero (n : MyNat) : myAdd n MyNat.zero = n := by
     rw [myAdd, add_zero]
 
 
-theorem succ_succ_minus (n : MyNat)
-  : myMinus n.succ.succ n = (myMinus n.succ n).succ := by
+theorem pred_minus (n1 : MyNat) (n2 : MyNat)
+  : myPred (myMinus n1.succ n2) = myMinus n1 n2 := by
+  match n2 with
+  | MyNat.zero =>
+    rw [myMinus, myMinus, myPred]
+  | MyNat.succ pn2 =>
+    rw [myMinus, myMinus, pred_minus]
 
-theorem succ_minus (n : MyNat) : myMinus n.succ n = MyNat.zero.succ := by
+
+theorem minus_self (n : MyNat) : myMinus n n = MyNat.zero := by
   match n with
-  | MyNat.zero => rw [myMinus]
-  | MyNat.succ pn =>
-    rw [myMinus]
-    sorry
+  | MyNat.zero => rfl
+  | MyNat.succ pn => rw [myMinus, pred_minus, minus_self]
+
+
+theorem add_suc (n1 : MyNat) (n2 : MyNat) :
+  myAdd n1 n2.succ = (myAdd n1 n2).succ := by
+  match n1 with
+  | MyNat.zero => rw [myAdd, myAdd]
+  | MyNat.succ pn1 => rw [myAdd, add_suc, myAdd]
+
+theorem comm_add (n1 : MyNat) (n2 : MyNat)
+  : myAdd n1 n2 = myAdd n2 n1 := by
+  match n2 with
+  | MyNat.zero => rw [myAdd, add_zero]
+  | MyNat.succ pn2 =>
+    rw [add_suc, myAdd, comm_add]
 
 theorem minus_cancels_add (n1 : MyNat) (n2 : MyNat) :
   myMinus (myAdd n2 n1) n2 = n1 := by
@@ -59,9 +70,4 @@ theorem minus_cancels_add (n1 : MyNat) (n2 : MyNat) :
   | MyNat.zero =>
     rw [myAdd, myMinus]
   | MyNat.succ pn2 =>
-    rw [myAdd, myMinus]
-    match n1 with
-    | MyNat.zero =>
-      sorry
-    | MyNat.succ pn1 =>
-      sorry
+    rw [myAdd, myMinus, pred_minus, minus_cancels_add]
