@@ -23,7 +23,7 @@ def ll12 := ll1.cons (List Nat) l
 def myfun : Listless → Nat
   | Listless.empty => 5
   | Listless.cons t _ _ => match t with
-    | Nat => 54
-    -- | _ => 24
+    -- | Nat => 54
+    | _ => 24
 
 #eval myfun ll2
