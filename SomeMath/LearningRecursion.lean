@@ -22,20 +22,30 @@ def len {α : Type u} : List α → Nat
   | empty => 0
   | cons _ as => 1 + (len as)
 
+
+theorem rloop_maintains_length {α : Type u} (xs ys : List α)
+  : len (reverse.loop xs ys) = len (xs) + len (ys) := by
+  match xs, ys with
+  | empty, _ => rw [reverse.loop, len]; simp
+  | cons x xs, empty =>
+    rw [reverse.loop, rloop_maintains_length xs _]
+    repeat (rw [len])
+    simp +arith
+  | cons x xs, cons y ys =>
+    rw [reverse.loop, rloop_maintains_length xs _]
+    repeat (rw [len])
+    simp +arith
+
+
 theorem reverse_maintains_length {α : Type u} (as : List α)
-  : len as = len (reverse as) :=
-  List.recOn (motive := fun as => len as = len (reverse as))
-    as
-    (show len empty = len (reverse empty) from rfl)
-    (fun (a : α) (as : List α) (ih : len as = len (reverse as)) =>
-     show len (cons a as) = len (reverse (cons a as)) from
-     calc len (cons a as)
-      _ = 1 + len as := rfl
-      _ = 1 + len (reverse as) := by rw [ih]
-      _ = len (reverse (cons a as)) := by
-        rw [reverse]
-        sorry -- would need auxiliary lemma about reverse.loop
-        )
+  : len as = len (reverse as) := by
+  rw [reverse, rloop_maintains_length as empty, len]
+  simp
+
+theorem reverse_reverse_loop {α : Type u} (xs rts : List α)
+  : reverse.loop xs rts = reverse.loop (reverse.loop rts xs) empty := by
+  match xs, rts with
+  |
 
 theorem reverse_reverse {α : Type u} (as : List α)
   : as = reverse (reverse as) := by
