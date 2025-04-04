@@ -63,3 +63,25 @@ theorem reverse_reverse {α : Type u} (xs : List α)
     reverse_loop_swap,
     reverse.loop,
     reverse.loop]
+
+end Hidden
+
+universe u v
+
+#check Acc
+
+-- instance mywf {α : Type u} : WellFoundedRelation α :=
+--   ⟨InvImage _ r sizeOf⟩
+
+
+noncomputable def myFix {α : Type u} {r : α → α → Prop} {C : α → Type v}
+  (hWF : WellFounded r)
+  (recipe : (x : α) → ((y : α) → r y x → C y) → C x)
+  : (x : α) → C x :=
+  fun whl => recipe whl (fun (prt : α) (h : r prt whl) => myFix hWF recipe prt)
+termination_by t => t
+decreasing_by
+  have hrprt := WellFounded.apply hWF prt
+  have hrx := WellFounded.apply hWF x
+  simp
+  admit
