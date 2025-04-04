@@ -68,20 +68,66 @@ end Hidden
 
 universe u v
 
-#check Acc
 
--- instance mywf {α : Type u} : WellFoundedRelation α :=
---   ⟨InvImage _ r sizeOf⟩
+def myrec {motive : Nat → Type u}
+  (hz : motive Nat.zero)
+  (hs : (x : Nat) → motive x → motive (x + 1))
+  : (∀ n : Nat, motive n) := by
+  intro n
+  match n with
+  | Nat.zero => exact hz
+  | Nat.succ prev =>
+    have hp : motive prev := myrec hz hs prev
+    exact hs prev hp
+
+-- def mybrec {motive : Nat → Type u}
+--   (hb : ((b : Nat) → Nat.below (motive := motive) b → motive b))
+--   : (∀ n : Nat, motive n) := by
+--   intro n
+--   have h1 : Nat.below (motive := motive) n := sorry
+--   exact hb n h1
 
 
-noncomputable def myFix {α : Type u} {r : α → α → Prop} {C : α → Type v}
-  (hWF : WellFounded r)
-  (recipe : (x : α) → ((y : α) → r y x → C y) → C x)
-  : (x : α) → C x :=
-  fun whl => recipe whl (fun (prt : α) (h : r prt whl) => myFix hWF recipe prt)
-termination_by t => t
-decreasing_by
-  have hrprt := WellFounded.apply hWF prt
-  have hrx := WellFounded.apply hWF x
-  simp
-  admit
+-- noncomputable def myFix {α : Type u} {r : α → α → Prop} {C : α → Type v}
+--   (hWF : WellFounded r)
+--   (recipe : (x : α) → ((y : α) → r y x → C y) → C x)
+--   : (x : α) → C x :=
+--   fun whl => recipe whl (fun (prt : α) (h : r prt whl) => myFix hWF recipe prt)
+-- termination_by t => t
+-- decreasing_by
+--   have hrprt := WellFounded.apply hWF prt
+--   have hrx := WellFounded.apply hWF x
+--   simp
+--   admit
+
+
+
+
+inductive MyVector (α : Type u) : Nat → Type u
+  | nil  : MyVector α 0
+  | cons : α → {n : Nat} → MyVector α n → MyVector α (n+1)
+
+open MyVector
+
+def rev_append {α : Type u}
+  : {n : Nat} → {m : Nat} → MyVector α n → MyVector α m → MyVector α (n + m)
+  | _, 0, v, _ => v
+  | 0, _, _, v => Eq.mp (by simp) v
+  | n+1, m, cons a v1p, v2 => Eq.mp (by
+    rw [Nat.add_assoc n 1 m, Nat.add_comm 1 m])
+    (@rev_append α n (m+1) v1p (cons a v2))
+
+def reverse {α : Type u} {n : Nat} (v : MyVector α n) : MyVector α n :=
+  loop v nil
+where
+  loop : {n : Nat} → {m : Nat} → MyVector α n → MyVector α m → MyVector α (n + m)
+  | 0, _, _, res => Eq.mp (by simp) res
+  | n+1, m, cons a v1p, v2 => Eq.mp (by
+    rw [Nat.add_assoc n 1 m, Nat.add_comm 1 m])
+    (@loop n (m+1) v1p (cons a v2))
+
+def append {α : Type u} {n : Nat} {m : Nat} (v1 : MyVector α n) (v2 : MyVector α m)
+  : MyVector α (n + m) :=
+  rev_append (reverse v1) v2
+
+#check Eq.mp
