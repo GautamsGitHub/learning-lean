@@ -121,13 +121,21 @@ def reverse {α : Type u} {n : Nat} (v : MyVector α n) : MyVector α n :=
   loop v nil
 where
   loop : {n : Nat} → {m : Nat} → MyVector α n → MyVector α m → MyVector α (n + m)
-  | 0, _, _, res => Eq.mp (by simp) res
-  | n+1, m, cons a v1p, v2 => Eq.mp (by
-    rw [Nat.add_assoc n 1 m, Nat.add_comm 1 m])
-    (@loop n (m+1) v1p (cons a v2))
+    | 0, _, _, res => Eq.mp (by simp) res
+    | n+1, m, cons a v1p, v2 => Eq.mp (by
+      rw [Nat.add_assoc n 1 m, Nat.add_comm 1 m])
+      (@loop n (m+1) v1p (cons a v2))
 
-def append {α : Type u} {n : Nat} {m : Nat} (v1 : MyVector α n) (v2 : MyVector α m)
-  : MyVector α (n + m) :=
-  rev_append (reverse v1) v2
+mutual
+  def append {α : Type u} {n : Nat} {m : Nat} (v1 : MyVector α n) (v2 : MyVector α m)
+    : MyVector α (n + m) :=
+    rev_append (@reverse' α n v1) v2
+
+  def reverse' {α : Type u} : {n : Nat} → MyVector α n → MyVector α n
+    | 0, nil => nil
+    | 1, v => v
+    | np+1, cons a vp =>
+      (@append α np 1 (@reverse' α np vp) (cons a nil))
+end
 
 #check Eq.mp
