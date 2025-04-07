@@ -139,3 +139,4 @@ mutual
 end
 
 #check Eq.mp
+#print inferInstance
