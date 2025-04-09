@@ -25,3 +25,17 @@ def dual_polyhedron {n m : Nat}
   (u : Fin m → Real)
   : Prop :=
   (elwiEq (Matrix.mulVec (A.transpose) u) c) ∧ (¬ elwiL u 0)
+
+
+structure Prebasis {n : Nat} {m : Fin n} where
+  set : Finset (Fin n)
+  hsize : set.card = m
+
+
+#check @Prebasis.mk 3 1 (Finset.cons
+    (@Fin.mk 8 6 (by simp))
+    (@Finset.empty (Fin 3))
+    (Finset.not_mem_empty _))
+  (by
+    simp
+    rfl)

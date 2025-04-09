@@ -137,6 +137,3 @@ mutual
     | np+1, cons a vp =>
       (@append α np 1 (@reverse' α np vp) (cons a nil))
 end
-
-#check Eq.mp
-#print inferInstance
