@@ -27,15 +27,42 @@ def dual_polyhedron {n m : Nat}
   (elwiEq (Matrix.mulVec (A.transpose) u) c) ∧ (¬ elwiL u 0)
 
 
-structure Prebasis {n : Nat} {m : Fin n} where
-  set : Finset (Fin n)
-  hsize : set.card = m
+structure Prebasis {m : Nat} where
+  n : Fin m
+  f : (Fin n) → (Fin m)
+
+structure Prebasis' {m : Nat} {n : Fin m} where
+  set : Finset (Fin m)
+  hsize : set.card = n
 
 
-#check @Prebasis.mk 3 1 (Finset.cons
+#check @Prebasis'.mk 3 1 (Finset.cons
     (@Fin.mk 8 6 (by simp))
     (@Finset.empty (Fin 3))
     (Finset.not_mem_empty _))
   (by
     simp
     rfl)
+
+noncomputable def row_submx' {m : Nat}
+  (p : Nat)
+  (Q : Matrix (Fin m) (Fin p) Real)
+  (I : Finset (Fin m))
+  : (Matrix (Fin I.card) (Fin p) Real) :=
+  Matrix.of (fun (i : Fin I.card) (j : Fin p) =>
+    Q (I.toList.get (Fin.cast (Eq.symm I.length_toList) i)) j
+  )
+
+def row_submx {m p s : Nat}
+  (Q : Matrix (Fin m) (Fin p) Real)
+  (I : (Fin s) → (Fin m))
+  : (Matrix (Fin s) (Fin p) Real) :=
+  Matrix.of (fun (i : Fin s) (j : Fin p) =>
+    Q (I i) j
+  )
+
+def matrix_of_prebasis {m p : Nat}
+  (Q : Matrix (Fin m) (Fin p) Real)
+  (I : @Prebasis m)
+  : (Matrix (Fin I.n) (Fin p) Real)
+  := row_submx Q I.f
