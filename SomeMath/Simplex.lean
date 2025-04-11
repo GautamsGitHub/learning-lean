@@ -2,6 +2,8 @@ import Mathlib.Data.Matrix.Basic
 import Mathlib.Data.Fin.VecNotation
 import Mathlib.Data.Real.Basic
 import Mathlib.LinearAlgebra.Matrix.Determinant.Basic
+import Mathlib.Algebra.Module.LinearMap.Defs
+import Mathlib.LinearAlgebra.Matrix.ToLin
 
 
 def elwiL {n : Nat} (v1 v2 : Fin n → Real) : Prop :=
@@ -73,8 +75,31 @@ noncomputable def my_basis_point {m : Nat} {n : Fin m}
     (Ring.inverse (matrix_of_prebasis A Ib.I))
     (b ∘ Ib.I.f)
 
-structure FeasibleBasis {m : Nat} {n : Fin m}
+structure PrebasisWithBasis {m : Nat} {n : Fin m}
+  (A : Matrix (Fin m) (Fin n) Real)
+  (b : Fin m → Real) where
+  I : @Prebasis m n
+  basis : Basis (Fin n) Real (Fin n → Real)
+  -- h : the basis is made of the I vectors from A
+
+def basis_point {m : Nat} {n : Fin m}
+  (A : Matrix (Fin m) (Fin n) Real)
+  (b : Fin m → Real)
+  (Ib : PrebasisWithBasis A b)
+  : (Fin n → Real)
+  := (Ib.basis).repr (b ∘ Ib.I.f)
+
+structure FeasibleBasisMy {m : Nat} {n : Fin m}
   (A : Matrix (Fin m) (Fin n) Real)
   (b : Fin m → Real) where
   Ib : @MyBasis m n A
   inph : polyhedron A b (my_basis_point A b Ib)
+
+structure FeasibleBasis {m : Nat} {n : Fin m}
+  (A : Matrix (Fin m) (Fin n) Real)
+  (b : Fin m → Real) where
+  Ib : PrebasisWithBasis A b
+  inph : polyhedron A b (basis_point A b Ib)
+
+#check Basis.ofEquivFun
+#check LinearEquiv.ofBijective
