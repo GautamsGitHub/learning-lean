@@ -131,4 +131,21 @@ theorem weak_duality {m : Nat} {n : Fin m}
       ← Matrix.dotProduct_mulVec,
       dotProduct_comm]
     apply LE.le.ge
-    apply dotProduct_le_dotProduct_of_nonneg_right ph (LE.le.ge h3)
+    apply dotProduct_le_dotProduct_of_nonneg_right
+      ph (LE.le.ge h3)
+
+
+def ext_reduced_cost_of_basis
+  (m : Nat) (n : Fin m) (I : @Prebasis m n) (u : Fin n → Real)
+  : Fin m → Real := fun ei =>
+    match Fin.find (fun i : Fin n => I.f i = ei) with
+    | some i => u i
+    | none => 0
+
+#check Finset.image
+#check Finset.univ
+
+-- theorem ext_reduced_cost_dual_feasible {m : Nat} {n : Fin m}
+--   (A : Matrix (Fin m) (Fin n) Real)
+--   (b : Fin m → Real)
+--   (c : Fin n → Real)
