@@ -1,4 +1,5 @@
 import Mathlib.Data.Matrix.Basic
+import Mathlib.Data.Matrix.Invertible
 import Mathlib.Data.Fin.VecNotation
 import Mathlib.Data.Real.Basic
 import Mathlib.LinearAlgebra.Matrix.Determinant.Basic
@@ -66,7 +67,8 @@ def matrix_of_prebasis {m p : Nat} {n : Fin m}
 structure IBasis {m : Nat} {n : Fin m}
   (A : Matrix (Fin m) (Fin n) Real) where
   I : @Prebasis m n
-  bas : (matrix_of_prebasis A I).det = 0
+  bas : IsUnit (matrix_of_prebasis A I)
+  -- bas : (matrix_of_prebasis A I).det = 0
   -- or something meaning matrix is invertible
 
 noncomputable def i_basis_point {m : Nat} {n : Fin m}
@@ -135,17 +137,140 @@ theorem weak_duality {m : Nat} {n : Fin m}
       ph (LE.le.ge h3)
 
 
-def ext_reduced_cost_of_basis
+def extend_indexed
   (m : Nat) (n : Fin m) (I : @Prebasis m n) (u : Fin n → Real)
   : Fin m → Real := fun ei =>
     match Fin.find (fun i : Fin n => I.f i = ei) with
     | some i => u i
     | none => 0
 
-#check Finset.image
-#check Finset.univ
 
--- theorem ext_reduced_cost_dual_feasible {m : Nat} {n : Fin m}
---   (A : Matrix (Fin m) (Fin n) Real)
---   (b : Fin m → Real)
---   (c : Fin n → Real)
+
+theorem ext_reduced_cost_dual_feasible {m : Nat} {n : Fin m}
+  (A : Matrix (Fin m) (Fin n) Real)
+  -- (b : Fin m → Real)
+  (c : Fin n → Real)
+  (Ib : @IBasis m n A)
+  : let u := (reduced_cost_of_basis A c Ib)
+    u ≥ 0 ↔ dual_polyhedron A c (extend_indexed m n Ib.I u) := by
+    have hswapij : (Matrix.of fun i j ↦ A (Ib.I.f i) j).transpose
+      = (Matrix.of fun j i ↦ A (Ib.I.f i) j) := by
+      apply funext
+      intros
+      apply funext
+      intros
+      rw [Matrix.transpose_apply]
+      rfl
+    apply Iff.intro
+    · intro h1
+      apply And.intro
+      · rw [
+        Matrix.mulVec_eq_sum,
+        Matrix.transpose_transpose,
+        ← Finset.sum_filter_add_sum_filter_not
+          (Finset.univ)
+          (fun i => i ∈ Finset.image Ib.I.f (Finset.univ))]
+        have h2 : ∑ x ∈ Finset.filter
+          (fun x ↦ x ∉ Finset.image Ib.I.f Finset.univ)
+          Finset.univ,
+          MulOpposite.op
+            (extend_indexed
+              m n Ib.I (reduced_cost_of_basis A c Ib) x
+            ) • A x = 0 := by
+          apply Finset.sum_eq_zero
+          intros x hx
+          simp [
+            Finset.mem_filter,
+            Finset.mem_univ,
+            true_and
+            ] at hx
+          rw [extend_indexed, Fin.find_eq_none_iff.mpr]
+          simp
+          exact hx
+        have h3 : ∑ x ∈ Finset.filter
+          (fun x ↦ x ∈ Finset.image Ib.I.f Finset.univ)
+          Finset.univ,
+          MulOpposite.op
+            (extend_indexed
+              m n Ib.I (reduced_cost_of_basis A c Ib) x
+            ) • A x = c := by
+          have : Finset.filter
+            (fun x ↦ x ∈ Finset.image Ib.I.f Finset.univ)
+            Finset.univ = Finset.image Ib.I.f Finset.univ := by
+            ext x
+            simp
+          rw [this]
+          rw [Finset.sum_image (by
+            intros x _ y _ h
+            exact Ib.I.inj h
+            )]
+          rw [
+            reduced_cost_of_basis,
+            matrix_of_prebasis,
+            row_submx]
+          have : (x : Fin n) →
+            extend_indexed
+              m n Ib.I
+              ((Ring.inverse (Matrix.of
+                fun i j ↦ A (Ib.I.f i) j).transpose).mulVec c)
+              (Ib.I.f x) =
+            ((Ring.inverse (Matrix.of
+              fun i j ↦ A (Ib.I.f i) j).transpose).mulVec c)
+            x := by
+            intro x
+            rw [extend_indexed, Fin.find_eq_some_iff.mpr]
+            apply And.intro
+            rfl
+            intros j hsame
+            apply le_of_eq
+            apply Eq.symm
+            exact Ib.I.inj hsame
+          simp_rw [this]
+          have hsubmt : (x : Fin n) → A (Ib.I.f x)
+            = (Matrix.of fun j i ↦ A (Ib.I.f i) j).transpose
+              x := by
+            intro x
+            apply funext
+            simp
+          rw [Finset.sum_congr rfl (fun x _ ↦ by rw [hsubmt x])]
+          conv =>
+            lhs
+            rw [← Matrix.mulVec_eq_sum, Matrix.mulVec_mulVec]
+
+          rw [
+            hswapij,
+            Ring.mul_inverse_cancel
+              (Matrix.of fun j i ↦ A (Ib.I.f i) j)
+              (by
+                rw [
+                  ←Matrix.isUnit_transpose,
+                  ←hswapij,
+                  Matrix.transpose_transpose
+                ]
+                exact Ib.bas
+            )
+          ]
+          rw [Matrix.one_mulVec]
+
+        rw [h2, h3, add_zero]
+      · intro x
+        rw [Pi.zero_apply, extend_indexed]
+        cases Fin.find fun i ↦ Ib.I.f i = x with
+        | some i => exact h1 i
+        | none => rfl
+    · intro hdp
+      have : (i : Fin n) → reduced_cost_of_basis A c Ib i
+        = extend_indexed m n Ib.I
+          (reduced_cost_of_basis A c Ib) (Ib.I.f i) := by
+        intro i
+        rw [extend_indexed, Fin.find_eq_some_iff.mpr]
+        apply And.intro
+        rfl
+        intros j hsame
+        apply le_of_eq
+        apply Eq.symm
+        exact Ib.I.inj hsame
+      intro i
+      rw [Pi.zero_apply, this]
+      rcases hdp with ⟨_, hnonneg⟩
+      exact hnonneg (Ib.I.f i)
