@@ -31,7 +31,6 @@ def dual_polyhedron {m n : Nat}
   (u : Fin m → Real)
   : Prop :=
   ((Matrix.mulVec (A.transpose) u) = c) ∧ (u ≥ 0)
-  -- (elwiEq (Matrix.mulVec (A.transpose) u) c) ∧ (¬ elwiL u 0)
 
 
 structure Prebasis {m : Nat} (n : Fin m) where
@@ -69,8 +68,6 @@ structure IBasis {m : Nat} {n : Fin m}
   (A : Matrix (Fin m) (Fin n) Real) where
   I : @Prebasis m n
   bas : Invertible (matrix_of_prebasis A I)
-  -- bas : IsUnit (matrix_of_prebasis A I).det
-  -- bas : (matrix_of_prebasis A I).det = 0
   -- or something meaning matrix is invertible
 
 noncomputable def i_basis_point {m : Nat} {n : Fin m}
@@ -78,26 +75,8 @@ noncomputable def i_basis_point {m : Nat} {n : Fin m}
   (b : Fin m → Real)
   (Ib : IBasis A)
   : (Fin n → Real)
-  := Matrix.mulVec
-    -- (Ring.inverse (matrix_of_prebasis A Ib.I))
-    -- (Matrix.nonsingInvUnit
-    --   (matrix_of_prebasis A Ib.I)
-    --   Ib.bas)
-    Ib.bas.invOf
-    (b ∘ Ib.I.f)
+  := Matrix.mulVec Ib.bas.invOf (b ∘ Ib.I.f)
 
-structure PrebasisWithBasis {m : Nat} {n : Fin m}
-  (A : Matrix (Fin m) (Fin n) Real) where
-  I : @Prebasis m n
-  basis : Basis (Fin n) Real (Fin n → Real)
-  -- h : the basis is made of the I vectors from A
-
-def basis_point {m : Nat} {n : Fin m}
-  (A : Matrix (Fin m) (Fin n) Real)
-  (b : Fin m → Real)
-  (Ib : PrebasisWithBasis A)
-  : (Fin n → Real)
-  := (Ib.basis).repr (b ∘ Ib.I.f)
 
 structure FeasibleBasisI {m : Nat} {n : Fin m}
   (A : Matrix (Fin m) (Fin n) Real)
@@ -105,21 +84,12 @@ structure FeasibleBasisI {m : Nat} {n : Fin m}
   Ib : @IBasis m n A
   inph : polyhedron A b (i_basis_point A b Ib)
 
-structure FeasibleBasis {m : Nat} {n : Fin m}
-  (A : Matrix (Fin m) (Fin n) Real)
-  (b : Fin m → Real) where
-  Ib : PrebasisWithBasis A
-  inph : polyhedron A b (basis_point A b Ib)
-
 noncomputable def point_of_basis {m : Nat} {n : Fin m}
   (A : Matrix (Fin m) (Fin n) Real)
   (b : Fin m → Real)
   (Ib : IBasis A)
   : (Fin n → Real) :=
   Matrix.mulVec
-    -- (Matrix.nonsingInvUnit
-    --   (matrix_of_prebasis A Ib.I)
-    --   Ib.bas)
     Ib.bas.invOf
     (b ∘ Ib.I.f)
   -- maybe could use Ring.inverse instead
@@ -131,15 +101,7 @@ noncomputable def reduced_cost_of_basis {m : Nat} {n : Fin m}
   (c : Fin n → Real)
   (Ib : @IBasis m n A)
   : (Fin n → Real) :=
-  -- let MPB := (matrix_of_prebasis A Ib.I)
-  Matrix.mulVec
-    Ib.bas.invOf.transpose
-    -- (Matrix.nonsingInvUnit
-    --   MPB.transpose
-    --   (MPB.isUnit_det_transpose Ib.bas))
-    --   (MPB.isUnit_det_transpose Ib.bas))
-    -- (Ring.inverse (matrix_of_prebasis A Ib.I).transpose)
-    c
+  Matrix.mulVec Ib.bas.invOf.transpose c
 
 
 theorem weak_duality {m : Nat} {n : Fin m}
@@ -305,8 +267,6 @@ theorem ext_reduced_cost_dual_feasible {m : Nat} {n : Fin m}
           )]
         rw [
           reduced_cost_of_basis,
-          -- matrix_of_prebasis,
-          -- row_submx]
         ]
         simp_rw [ei_I_f]
         have hsubmt : (x : Fin n) → A (Ib.I.f x)
@@ -326,17 +286,6 @@ theorem ext_reduced_cost_dual_feasible {m : Nat} {n : Fin m}
           hMPB,
           Matrix.transpose_invOf,
           mul_invOf_self
-          -- hswapij,
-          -- Ring.mul_inverse_cancel
-          --   (Matrix.of fun j i ↦ A (Ib.I.f i) j)
-          --   (by
-          --     rw [
-          --       ←Matrix.isUnit_transpose,
-          --       ←hswapij,
-          --       Matrix.transpose_transpose
-          --     ]
-          --     exact Ib.bas
-          -- )
         ]
         rw [Matrix.one_mulVec]
 
