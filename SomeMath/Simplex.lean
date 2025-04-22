@@ -8,16 +8,6 @@ import Mathlib.LinearAlgebra.Matrix.ToLin
 import Mathlib.LinearAlgebra.Matrix.DotProduct
 import Mathlib.LinearAlgebra.Matrix.NonsingularInverse
 
-
-def elwiL {n : Nat} (v1 v2 : Fin n → Real) : Prop :=
-  ∀ i : Fin n, v1 i < v2 i
-
-def elwiG {n : Nat} (v1 v2 : Fin n → Real) : Prop :=
-  ∀ i : Fin n, v1 i > v2 i
-
-def elwiEq {n : Nat} (v1 v2 : Fin n → Real) : Prop :=
-  ∀ i : Fin n, v1 i = v2 i
-
 def polyhedron {m n : Nat}
   (A : Matrix (Fin m) (Fin n) Real)
   (b : Fin m → Real)
@@ -37,18 +27,6 @@ structure Prebasis {m : Nat} (n : Fin m) where
   f : (Fin n) → (Fin m)
   inj : Function.Injective f
 
-structure Prebasis' {m : Nat} {n : Fin m} where
-  set : Finset (Fin m)
-  hsize : set.card = n
-
-noncomputable def row_submx' {m : Nat}
-  (p : Nat)
-  (Q : Matrix (Fin m) (Fin p) Real)
-  (I : Finset (Fin m))
-  : (Matrix (Fin I.card) (Fin p) Real) :=
-  Matrix.of (fun (i : Fin I.card) (j : Fin p) =>
-    Q (I.toList.get (Fin.cast (Eq.symm I.length_toList) i)) j
-  )
 
 def row_submx {m p s : Nat}
   (Q : Matrix (Fin m) (Fin p) Real)
@@ -84,20 +62,9 @@ structure FeasibleBasisI {m : Nat} {n : Fin m}
   Ib : @IBasis m n A
   inph : polyhedron A b (i_basis_point A b Ib)
 
-noncomputable def point_of_basis {m : Nat} {n : Fin m}
-  (A : Matrix (Fin m) (Fin n) Real)
-  (b : Fin m → Real)
-  (Ib : IBasis A)
-  : (Fin n → Real) :=
-  Matrix.mulVec
-    Ib.bas.invOf
-    (b ∘ Ib.I.f)
-  -- maybe could use Ring.inverse instead
-
-
 
 noncomputable def reduced_cost_of_basis {m : Nat} {n : Fin m}
-  (A : Matrix (Fin m) (Fin n) Real)
+  {A : Matrix (Fin m) (Fin n) Real}
   (c : Fin n → Real)
   (Ib : @IBasis m n A)
   : (Fin n → Real) :=
@@ -207,7 +174,7 @@ theorem ext_reduced_cost_dual_feasible {m : Nat} {n : Fin m}
   (A : Matrix (Fin m) (Fin n) Real)
   (c : Fin n → Real)
   (Ib : @IBasis m n A)
-  : let u := (reduced_cost_of_basis A c Ib)
+  : let u := (reduced_cost_of_basis c Ib)
     u ≥ 0 ↔ dual_polyhedron A c (extend_indexed m n Ib.I u) := by
   have hswapij : (Matrix.of fun i j ↦ A (Ib.I.f i) j).transpose
     = (Matrix.of fun j i ↦ A (Ib.I.f i) j) := by
@@ -236,7 +203,7 @@ theorem ext_reduced_cost_dual_feasible {m : Nat} {n : Fin m}
         Finset.univ,
         MulOpposite.op
           (extend_indexed
-            m n Ib.I (reduced_cost_of_basis A c Ib) x
+            m n Ib.I (reduced_cost_of_basis c Ib) x
           ) • A x = 0 := by
         apply Finset.sum_eq_zero
         intros x hx
@@ -253,7 +220,7 @@ theorem ext_reduced_cost_dual_feasible {m : Nat} {n : Fin m}
         Finset.univ,
         MulOpposite.op
           (extend_indexed
-            m n Ib.I (reduced_cost_of_basis A c Ib) x
+            m n Ib.I (reduced_cost_of_basis c Ib) x
           ) • A x = c := by
         have : Finset.filter
           (fun x ↦ x ∈ Finset.image Ib.I.f Finset.univ)
@@ -296,9 +263,9 @@ theorem ext_reduced_cost_dual_feasible {m : Nat} {n : Fin m}
       | some i => exact h1 i
       | none => rfl
   · intro hdp
-    have : (i : Fin n) → reduced_cost_of_basis A c Ib i
+    have : (i : Fin n) → reduced_cost_of_basis c Ib i
       = extend_indexed m n Ib.I
-        (reduced_cost_of_basis A c Ib) (Ib.I.f i) := by
+        (reduced_cost_of_basis c Ib) (Ib.I.f i) := by
       intro i
       rw [extend_indexed, Fin.find_eq_some_iff.mpr]
       apply And.intro
@@ -318,7 +285,7 @@ theorem optimal_cert_on_basis {m : Nat} {n : Fin m}
   (c : Fin n → Real)
   (FBI : @FeasibleBasisI m n A b)
   : (y : Fin n → Real) → polyhedron A b y →
-    reduced_cost_of_basis A c FBI.Ib ≥ 0 →
+    reduced_cost_of_basis c FBI.Ib ≥ 0 →
     dotProduct c (i_basis_point A b FBI.Ib)
     ≤ dotProduct c y := by
   intros y hphy hrcnn
@@ -333,3 +300,29 @@ theorem optimal_cert_on_basis {m : Nat} {n : Fin m}
   apply GE.ge.le at h1
   rw [dotProduct_comm, ei_dot] at h1
   exact h1
+
+
+def direction
+  {m : Nat}
+  {n : Fin m}
+  {A : Matrix (Fin m) (Fin n) Real}
+  (Ib : IBasis A)
+  (i : Fin n)
+  : (Fin n → Real) :=
+  Ib.bas.invOf.transpose i
+
+theorem direction_improvement
+  {m : Nat}
+  {n : Fin m}
+  {A : Matrix (Fin m) (Fin n) Real}
+  (c : Fin n → Real)
+  (Ib : IBasis A)
+  (i : Fin n)
+  : (reduced_cost_of_basis c Ib) i < 0 →
+    dotProduct c (direction Ib i) < 0 := by
+  intro h
+  unfold reduced_cost_of_basis at h
+  unfold Matrix.mulVec at h
+  unfold direction
+  rw [dotProduct_comm]
+  exact h
