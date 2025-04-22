@@ -326,3 +326,58 @@ theorem direction_improvement
   unfold direction
   rw [dotProduct_comm]
   exact h
+
+def feasible_dir
+  {m : Nat}
+  {n : Fin m}
+  (A : Matrix (Fin m) (Fin n) Real)
+  (d : Fin n → Real)
+  : Prop :=
+  Matrix.mulVec A d ≥ 0
+
+theorem unbounded_cert_on_basis
+  {m : Nat}
+  {n : Fin m}
+  (A : Matrix (Fin m) (Fin n) Real)
+  (b : Fin m → Real)
+  (c : Fin n → Real)
+  (FBI : FeasibleBasisI A b)
+  (i : Fin n)
+  : feasible_dir A (direction FBI.Ib i) →
+    reduced_cost_of_basis c FBI.Ib i < 0 →
+    ∀ M : Real, ∃ x : Fin n → Real,
+      polyhedron A b x ∧ dotProduct c x < M := by
+  intros hfeasd hnegrc M
+  let p1 : Fin n → Real := i_basis_point A b FBI.Ib
+  let d : Fin n → Real := direction FBI.Ib i
+  let p2 : Fin n → Real :=
+    p1 + (max 1 ((M - 1 - dotProduct c p1) / dotProduct c d)) • d
+  have hdlsc := direction_improvement c FBI.Ib i hnegrc
+  use p2
+  apply And.intro
+  · unfold polyhedron
+    rw [Matrix.mulVec_add]
+    apply LE.le.ge
+    rw [← sub_nonneg, add_comm, add_sub_assoc]
+    apply add_nonneg
+    · rw [Matrix.mulVec_smul]
+      apply smul_nonneg'
+      · apply (le_trans zero_le_one)
+        exact le_max_left 1 ((M - 1 - c ⬝ᵥ p1) / c ⬝ᵥ d)
+      · exact LE.le.ge hfeasd
+    · rw [sub_nonneg]
+      exact GE.ge.le FBI.inph
+  · rw [dotProduct_add]
+    by_cases h : (M - 1 - c ⬝ᵥ p1) / c ⬝ᵥ d < 1
+    · rw [max_eq_left_of_lt h, one_smul]
+      apply lt_tsub_iff_left.mp
+      apply (div_lt_one_of_neg hdlsc).mp at h
+      linarith
+    · have h2 := le_of_not_lt h
+      rw [max_eq_right h2, dotProduct_smul]
+      apply lt_tsub_iff_left.mp
+      rw [
+        smul_eq_mul,
+        mul_comm_div,
+        (div_eq_one_iff_eq (ne_of_lt hdlsc)).mpr (by rfl)]
+      linarith
