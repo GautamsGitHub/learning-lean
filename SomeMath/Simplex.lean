@@ -43,30 +43,33 @@ def matrix_of_prebasis {m p : Nat} {n : Fin m}
   := row_submx Q I.f
 
 structure IBasis {m : Nat} {n : Fin m}
-  (A : Matrix (Fin m) (Fin n) Real) where
-  I : @Prebasis m n
+  (A : Matrix (Fin m) (Fin n) Real)
+  (I : @Prebasis m n) where
   bas : Invertible (matrix_of_prebasis A I)
   -- or something meaning matrix is invertible
 
 noncomputable def i_basis_point {m : Nat} {n : Fin m}
-  (A : Matrix (Fin m) (Fin n) Real)
+  {A : Matrix (Fin m) (Fin n) Real}
+  {I : @Prebasis m n}
   (b : Fin m → Real)
-  (Ib : IBasis A)
+  (Ib : IBasis A I)
   : (Fin n → Real)
-  := Matrix.mulVec Ib.bas.invOf (b ∘ Ib.I.f)
+  := Matrix.mulVec Ib.bas.invOf (b ∘ I.f)
 
 
 structure FeasibleBasisI {m : Nat} {n : Fin m}
-  (A : Matrix (Fin m) (Fin n) Real)
-  (b : Fin m → Real) where
-  Ib : @IBasis m n A
-  inph : polyhedron A b (i_basis_point A b Ib)
+  {A : Matrix (Fin m) (Fin n) Real}
+  {I : @Prebasis m n}
+  (b : Fin m → Real)
+  (Ib : @IBasis m n A I) where
+  inph : polyhedron A b (i_basis_point b Ib)
 
 
 noncomputable def reduced_cost_of_basis {m : Nat} {n : Fin m}
   {A : Matrix (Fin m) (Fin n) Real}
+  {I : @Prebasis m n}
   (c : Fin n → Real)
-  (Ib : @IBasis m n A)
+  (Ib : @IBasis m n A I)
   : (Fin n → Real) :=
   Matrix.mulVec Ib.bas.invOf.transpose c
 
@@ -172,20 +175,21 @@ theorem ei_dot {m : Nat} {n : Fin m}
 
 theorem ext_reduced_cost_dual_feasible {m : Nat} {n : Fin m}
   (A : Matrix (Fin m) (Fin n) Real)
+  (I : @Prebasis m n)
   (c : Fin n → Real)
-  (Ib : @IBasis m n A)
+  (Ib : @IBasis m n A I)
   : let u := (reduced_cost_of_basis c Ib)
-    u ≥ 0 ↔ dual_polyhedron A c (extend_indexed m n Ib.I u) := by
-  have hswapij : (Matrix.of fun i j ↦ A (Ib.I.f i) j).transpose
-    = (Matrix.of fun j i ↦ A (Ib.I.f i) j) := by
+    u ≥ 0 ↔ dual_polyhedron A c (extend_indexed m n I u) := by
+  have hswapij : (Matrix.of fun i j ↦ A (I.f i) j).transpose
+    = (Matrix.of fun j i ↦ A (I.f i) j) := by
     apply funext
     intros
     apply funext
     intros
     rw [Matrix.transpose_apply]
     rfl
-  have hMPB : (Matrix.of fun i j ↦ A (Ib.I.f i) j)
-    = matrix_of_prebasis A Ib.I := by
+  have hMPB : (Matrix.of fun i j ↦ A (I.f i) j)
+    = matrix_of_prebasis A I := by
     unfold matrix_of_prebasis
     unfold row_submx
     rfl
@@ -197,13 +201,13 @@ theorem ext_reduced_cost_dual_feasible {m : Nat} {n : Fin m}
       Matrix.transpose_transpose,
       ← Finset.sum_filter_add_sum_filter_not
         (Finset.univ)
-        (fun i => i ∈ Finset.image Ib.I.f (Finset.univ))]
+        (fun i => i ∈ Finset.image I.f (Finset.univ))]
       have h2 : ∑ x ∈ Finset.filter
-        (fun x ↦ x ∉ Finset.image Ib.I.f Finset.univ)
+        (fun x ↦ x ∉ Finset.image I.f Finset.univ)
         Finset.univ,
         MulOpposite.op
           (extend_indexed
-            m n Ib.I (reduced_cost_of_basis c Ib) x
+            m n I (reduced_cost_of_basis c Ib) x
           ) • A x = 0 := by
         apply Finset.sum_eq_zero
         intros x hx
@@ -216,28 +220,28 @@ theorem ext_reduced_cost_dual_feasible {m : Nat} {n : Fin m}
         simp
         exact hx
       have h3 : ∑ x ∈ Finset.filter
-        (fun x ↦ x ∈ Finset.image Ib.I.f Finset.univ)
+        (fun x ↦ x ∈ Finset.image I.f Finset.univ)
         Finset.univ,
         MulOpposite.op
           (extend_indexed
-            m n Ib.I (reduced_cost_of_basis c Ib) x
+            m n I (reduced_cost_of_basis c Ib) x
           ) • A x = c := by
         have : Finset.filter
-          (fun x ↦ x ∈ Finset.image Ib.I.f Finset.univ)
-          Finset.univ = Finset.image Ib.I.f Finset.univ := by
+          (fun x ↦ x ∈ Finset.image I.f Finset.univ)
+          Finset.univ = Finset.image I.f Finset.univ := by
           ext x
           simp
         rw [this]
         rw [Finset.sum_image (by
           intros x _ y _ h
-          exact Ib.I.inj h
+          exact I.inj h
           )]
         rw [
           reduced_cost_of_basis,
         ]
         simp_rw [ei_I_f]
-        have hsubmt : (x : Fin n) → A (Ib.I.f x)
-          = (Matrix.of fun j i ↦ A (Ib.I.f i) j).transpose
+        have hsubmt : (x : Fin n) → A (I.f x)
+          = (Matrix.of fun j i ↦ A (I.f i) j).transpose
             x := by
           intro x
           apply funext
@@ -247,7 +251,7 @@ theorem ext_reduced_cost_dual_feasible {m : Nat} {n : Fin m}
           lhs
           rw [← Matrix.mulVec_eq_sum, Matrix.mulVec_mulVec]
 
-        have : Invertible (matrix_of_prebasis A Ib.I) := Ib.bas
+        have : Invertible (matrix_of_prebasis A I) := Ib.bas
         rw [
           ← hswapij,
           hMPB,
@@ -259,13 +263,13 @@ theorem ext_reduced_cost_dual_feasible {m : Nat} {n : Fin m}
       rw [h2, h3, add_zero]
     · intro x
       rw [Pi.zero_apply, extend_indexed]
-      cases Fin.find fun i ↦ Ib.I.f i = x with
+      cases Fin.find fun i ↦ I.f i = x with
       | some i => exact h1 i
       | none => rfl
   · intro hdp
     have : (i : Fin n) → reduced_cost_of_basis c Ib i
-      = extend_indexed m n Ib.I
-        (reduced_cost_of_basis c Ib) (Ib.I.f i) := by
+      = extend_indexed m n I
+        (reduced_cost_of_basis c Ib) (I.f i) := by
       intro i
       rw [extend_indexed, Fin.find_eq_some_iff.mpr]
       apply And.intro
@@ -273,25 +277,27 @@ theorem ext_reduced_cost_dual_feasible {m : Nat} {n : Fin m}
       intros j hsame
       apply le_of_eq
       apply Eq.symm
-      exact Ib.I.inj hsame
+      exact I.inj hsame
     intro i
     rw [Pi.zero_apply, this]
     rcases hdp with ⟨_, hnonneg⟩
-    exact hnonneg (Ib.I.f i)
+    exact hnonneg (I.f i)
 
 theorem optimal_cert_on_basis {m : Nat} {n : Fin m}
   (A : Matrix (Fin m) (Fin n) Real)
+  (I : @Prebasis m n)
   (b : Fin m → Real)
   (c : Fin n → Real)
-  (FBI : @FeasibleBasisI m n A b)
+  (Ib : IBasis A I)
+  (_ : @FeasibleBasisI m n A I b Ib)
   : (y : Fin n → Real) → polyhedron A b y →
-    reduced_cost_of_basis c FBI.Ib ≥ 0 →
-    dotProduct c (i_basis_point A b FBI.Ib)
+    reduced_cost_of_basis c Ib ≥ 0 →
+    dotProduct c (i_basis_point b Ib)
     ≤ dotProduct c y := by
   intros y hphy hrcnn
-  have hdp := (ext_reduced_cost_dual_feasible A c FBI.Ib).mp hrcnn
+  have hdp := (ext_reduced_cost_dual_feasible A I c Ib).mp hrcnn
   have h1 := weak_duality A b c (And.intro hphy hdp)
-  have hinv : Invertible (matrix_of_prebasis A FBI.Ib.I) := FBI.Ib.bas
+  have hinv : Invertible (matrix_of_prebasis A I) := Ib.bas
   rw [
     i_basis_point,
     Matrix.dotProduct_mulVec,
@@ -306,7 +312,8 @@ def direction
   {m : Nat}
   {n : Fin m}
   {A : Matrix (Fin m) (Fin n) Real}
-  (Ib : IBasis A)
+  {I : @Prebasis m n}
+  (Ib : IBasis A I)
   (i : Fin n)
   : (Fin n → Real) :=
   Ib.bas.invOf.transpose i
@@ -315,8 +322,9 @@ theorem direction_improvement
   {m : Nat}
   {n : Fin m}
   {A : Matrix (Fin m) (Fin n) Real}
+  {I : @Prebasis m n}
   (c : Fin n → Real)
-  (Ib : IBasis A)
+  (Ib : IBasis A I)
   (i : Fin n)
   : (reduced_cost_of_basis c Ib) i < 0 →
     dotProduct c (direction Ib i) < 0 := by
@@ -338,21 +346,23 @@ def feasible_dir
 theorem unbounded_cert_on_basis
   {m : Nat}
   {n : Fin m}
+  {I : Prebasis n}
   (A : Matrix (Fin m) (Fin n) Real)
+  (Ib : IBasis A I)
   (b : Fin m → Real)
   (c : Fin n → Real)
-  (FBI : FeasibleBasisI A b)
+  (FBI : FeasibleBasisI b Ib)
   (i : Fin n)
-  : feasible_dir A (direction FBI.Ib i) →
-    reduced_cost_of_basis c FBI.Ib i < 0 →
+  : feasible_dir A (direction Ib i) →
+    reduced_cost_of_basis c Ib i < 0 →
     ∀ M : Real, ∃ x : Fin n → Real,
       polyhedron A b x ∧ dotProduct c x < M := by
   intros hfeasd hnegrc M
-  let p1 : Fin n → Real := i_basis_point A b FBI.Ib
-  let d : Fin n → Real := direction FBI.Ib i
+  let p1 : Fin n → Real := i_basis_point b Ib
+  let d : Fin n → Real := direction Ib i
   let p2 : Fin n → Real :=
     p1 + (max 1 ((M - 1 - dotProduct c p1) / dotProduct c d)) • d
-  have hdlsc := direction_improvement c FBI.Ib i hnegrc
+  have hdlsc := direction_improvement c Ib i hnegrc
   use p2
   apply And.intro
   · unfold polyhedron
@@ -392,23 +402,25 @@ def b_pert {m : Nat} (b : Fin m → Real)
   )
 
 noncomputable def i_basis_point_pert {m : Nat} {n : Fin m}
+  {I : Prebasis n}
   (A : Matrix (Fin m) (Fin n) Real)
   (b : Fin m → Real)
-  (Ib : IBasis A)
+  (Ib : IBasis A I)
   : Matrix (Fin n) (Fin (m + 1)) Real :=
   let bp := b_pert b
-  Ib.bas.invOf * Matrix.of (bp ∘ Ib.I.f)
+  Ib.bas.invOf * Matrix.of (bp ∘ I.f)
 
 theorem rel_basis_point {m : Nat} {n : Fin m}
+  {I : Prebasis n}
   (A : Matrix (Fin m) (Fin n) Real)
   (b : Fin m → Real)
-  (Ib : IBasis A)
-  : i_basis_point A b Ib =
+  (Ib : IBasis A I)
+  : i_basis_point b Ib =
     fun i => (i_basis_point_pert A b Ib) i 0 := by
   funext i
   have h
-    : (Matrix.of (b_pert b ∘ Ib.I.f)).transpose 0 =
-      b ∘ Ib.I.f := by
+    : (Matrix.of (b_pert b ∘ I.f)).transpose 0 =
+      b ∘ I.f := by
     funext i
     rw [
       Matrix.transpose_apply,
@@ -419,9 +431,49 @@ theorem rel_basis_point {m : Nat} {n : Fin m}
     i_basis_point_pert,
     i_basis_point,
     ← Matrix.transpose_apply
-      (Ib.bas.invOf * Matrix.of (b_pert b ∘ Ib.I.f)),
+      (Ib.bas.invOf * Matrix.of (b_pert b ∘ I.f)),
     Matrix.transpose_mul,
     Matrix.mul_apply_eq_vecMul,
     Matrix.vecMul_transpose,
     h
   ]
+
+def row_lex {l : Nat} (r1 r2: Fin l → Real) : Prop :=
+  row_lex_counter r1 r2 0
+where
+  row_lex_counter
+    {l : Nat}
+    (r1 r2: Fin l → Real)
+    (c : Fin (l + 1))
+    : Prop :=
+    if h : c.val < l then
+      r1 ⟨c, h⟩ < r1 ⟨c, h⟩
+      ∨ (r1 ⟨c, h⟩ = r1 ⟨c, h⟩ ∧ row_lex_counter r1 r2
+        ⟨c + 1, Nat.add_one_lt_add_one_iff.mpr h⟩)
+    else True
+
+def is_lex_feasible {m : Nat} {n : Fin m}
+  {I : Prebasis n}
+  (A : Matrix (Fin m) (Fin n) Real)
+  (b : Fin m → Real)
+  (Ib : IBasis A I)
+  : Prop :=
+  ∀ i : Fin m,
+  row_lex
+    (Matrix.vecMul (A i) (i_basis_point_pert A b Ib))
+    (b_pert b i)
+
+structure LexFeasibleBasis {m : Nat} {n : Fin m}
+  {I : Prebasis n}
+  (A : Matrix (Fin m) (Fin n) Real)
+  (b : Fin m → Real)
+  (Ib : IBasis A I) where
+  pert_feas : is_lex_feasible A b Ib
+
+theorem lex_feasible_basis_is_feasible {m : Nat} {n : Fin m}
+  {I : Prebasis n}
+  {A : Matrix (Fin m) (Fin n) Real}
+  {b : Fin m → Real}
+  {Ib : IBasis A I}
+  (LFBI : LexFeasibleBasis A b Ib)
+  : FeasibleBasisI b Ib := sorry
