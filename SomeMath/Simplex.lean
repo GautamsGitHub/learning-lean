@@ -381,3 +381,47 @@ theorem unbounded_cert_on_basis
         mul_comm_div,
         (div_eq_one_iff_eq (ne_of_lt hdlsc)).mpr (by rfl)]
       linarith
+
+def b_pert {m : Nat} (b : Fin m → Real)
+  : Matrix (Fin m) (Fin (m + 1)) Real :=
+  Matrix.of (
+    fun i j ↦
+      if j = 0 then b i
+      else if j = i + 1 then -1
+      else 0
+  )
+
+noncomputable def i_basis_point_pert {m : Nat} {n : Fin m}
+  (A : Matrix (Fin m) (Fin n) Real)
+  (b : Fin m → Real)
+  (Ib : IBasis A)
+  : Matrix (Fin n) (Fin (m + 1)) Real :=
+  let bp := b_pert b
+  Ib.bas.invOf * Matrix.of (bp ∘ Ib.I.f)
+
+theorem rel_basis_point {m : Nat} {n : Fin m}
+  (A : Matrix (Fin m) (Fin n) Real)
+  (b : Fin m → Real)
+  (Ib : IBasis A)
+  : i_basis_point A b Ib =
+    fun i => (i_basis_point_pert A b Ib) i 0 := by
+  funext i
+  have h
+    : (Matrix.of (b_pert b ∘ Ib.I.f)).transpose 0 =
+      b ∘ Ib.I.f := by
+    funext i
+    rw [
+      Matrix.transpose_apply,
+      b_pert
+    ]
+    simp
+  rw [
+    i_basis_point_pert,
+    i_basis_point,
+    ← Matrix.transpose_apply
+      (Ib.bas.invOf * Matrix.of (b_pert b ∘ Ib.I.f)),
+    Matrix.transpose_mul,
+    Matrix.mul_apply_eq_vecMul,
+    Matrix.vecMul_transpose,
+    h
+  ]
