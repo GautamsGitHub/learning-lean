@@ -174,8 +174,8 @@ theorem ei_dot {m : Nat} {n : Fin m}
     rfl
 
 theorem ext_reduced_cost_dual_feasible {m : Nat} {n : Fin m}
-  (A : Matrix (Fin m) (Fin n) Real)
-  (I : @Prebasis m n)
+  {A : Matrix (Fin m) (Fin n) Real}
+  {I : @Prebasis m n}
   (c : Fin n → Real)
   (Ib : @IBasis m n A I)
   : let u := (reduced_cost_of_basis c Ib)
@@ -284,8 +284,8 @@ theorem ext_reduced_cost_dual_feasible {m : Nat} {n : Fin m}
     exact hnonneg (I.f i)
 
 theorem optimal_cert_on_basis {m : Nat} {n : Fin m}
-  (A : Matrix (Fin m) (Fin n) Real)
-  (I : @Prebasis m n)
+  {A : Matrix (Fin m) (Fin n) Real}
+  {I : @Prebasis m n}
   (b : Fin m → Real)
   (c : Fin n → Real)
   (Ib : IBasis A I)
@@ -295,7 +295,7 @@ theorem optimal_cert_on_basis {m : Nat} {n : Fin m}
     dotProduct c (i_basis_point b Ib)
     ≤ dotProduct c y := by
   intros y hphy hrcnn
-  have hdp := (ext_reduced_cost_dual_feasible A I c Ib).mp hrcnn
+  have hdp := (ext_reduced_cost_dual_feasible c Ib).mp hrcnn
   have h1 := weak_duality A b c (And.intro hphy hdp)
   have hinv : Invertible (matrix_of_prebasis A I) := Ib.bas
   rw [
@@ -347,8 +347,8 @@ theorem unbounded_cert_on_basis
   {m : Nat}
   {n : Fin m}
   {I : Prebasis n}
-  (A : Matrix (Fin m) (Fin n) Real)
-  (Ib : IBasis A I)
+  {A : Matrix (Fin m) (Fin n) Real}
+  {Ib : IBasis A I}
   (b : Fin m → Real)
   (c : Fin n → Real)
   (FBI : FeasibleBasisI b Ib)
@@ -403,7 +403,7 @@ def b_pert {m : Nat} (b : Fin m → Real)
 
 noncomputable def i_basis_point_pert {m : Nat} {n : Fin m}
   {I : Prebasis n}
-  (A : Matrix (Fin m) (Fin n) Real)
+  {A : Matrix (Fin m) (Fin n) Real}
   (b : Fin m → Real)
   (Ib : IBasis A I)
   : Matrix (Fin n) (Fin (m + 1)) Real :=
@@ -412,11 +412,11 @@ noncomputable def i_basis_point_pert {m : Nat} {n : Fin m}
 
 theorem rel_basis_point {m : Nat} {n : Fin m}
   {I : Prebasis n}
-  (A : Matrix (Fin m) (Fin n) Real)
+  {A : Matrix (Fin m) (Fin n) Real}
   (b : Fin m → Real)
   (Ib : IBasis A I)
   : i_basis_point b Ib =
-    fun i => (i_basis_point_pert A b Ib) i 0 := by
+    fun i => (i_basis_point_pert b Ib) i 0 := by
   funext i
   have h
     : (Matrix.of (b_pert b ∘ I.f)).transpose 0 =
@@ -454,26 +454,26 @@ where
 
 def is_lex_feasible {m : Nat} {n : Fin m}
   {I : Prebasis n}
-  (A : Matrix (Fin m) (Fin n) Real)
+  {A : Matrix (Fin m) (Fin n) Real}
   (b : Fin m → Real)
   (Ib : IBasis A I)
   : Prop :=
   ∀ i : Fin m,
   row_lex
-    (Matrix.vecMul (A i) (i_basis_point_pert A b Ib))
+    (Matrix.vecMul (A i) (i_basis_point_pert b Ib))
     (b_pert b i)
 
 structure LexFeasibleBasis {m : Nat} {n : Fin m}
   {I : Prebasis n}
-  (A : Matrix (Fin m) (Fin n) Real)
+  {A : Matrix (Fin m) (Fin n) Real}
   (b : Fin m → Real)
   (Ib : IBasis A I) where
-  pert_feas : is_lex_feasible A b Ib
+  pert_feas : is_lex_feasible b Ib
 
 theorem lex_feasible_basis_is_feasible {m : Nat} {n : Fin m}
   {I : Prebasis n}
   {A : Matrix (Fin m) (Fin n) Real}
   {b : Fin m → Real}
   {Ib : IBasis A I}
-  (LFBI : LexFeasibleBasis A b Ib)
+  (LFBI : LexFeasibleBasis b Ib)
   : FeasibleBasisI b Ib := sorry
