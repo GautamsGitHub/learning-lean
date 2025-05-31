@@ -447,10 +447,37 @@ where
     (c : Fin (l + 1))
     : Prop :=
     if h : c.val < l then
-      r1 ⟨c, h⟩ < r1 ⟨c, h⟩
-      ∨ (r1 ⟨c, h⟩ = r1 ⟨c, h⟩ ∧ row_lex_counter r1 r2
-        ⟨c + 1, Nat.add_one_lt_add_one_iff.mpr h⟩)
+      r1 ⟨c.val, h⟩ < r2 ⟨c.val, h⟩
+      ∨ (r1 ⟨c.val, h⟩ = r2 ⟨c.val, h⟩ ∧ row_lex_counter r1 r2
+        ⟨c.val + 1, Nat.add_one_lt_add_one_iff.mpr h⟩)
     else True
+
+theorem row_lex_implies_leq
+  {l : Nat} {r1 r2: Fin l → Real} (hl: l > 0)
+  : row_lex r1 r2 → r1 ⟨0, hl⟩ ≤ r2 ⟨0, hl⟩ := by
+  have hlr := GT.gt.lt hl
+  unfold row_lex
+  unfold row_lex.row_lex_counter
+  intro h2
+  have h00 := @Fin.val_zero
+    (l + 1)
+    (NeZero.of_pos
+      (lt_trans hlr (Nat.lt_succ_self l)))
+  split at h2
+  · next h => cases h2 with
+    | inl h3 =>
+      apply le_of_lt
+      rw [Fin.mk_eq_mk.mpr (h00)] at h3
+      exact h3
+    | inr h4 =>
+      apply le_of_eq
+      rw [Fin.mk_eq_mk.mpr (h00)] at h4
+      exact h4.left
+  · exfalso
+    next h =>
+      apply h
+      exact GT.gt.lt hl
+
 
 def is_lex_feasible {m : Nat} {n : Fin m}
   {I : Prebasis n}
@@ -460,8 +487,8 @@ def is_lex_feasible {m : Nat} {n : Fin m}
   : Prop :=
   ∀ i : Fin m,
   row_lex
-    (Matrix.vecMul (A i) (i_basis_point_pert b Ib))
     (b_pert b i)
+    (Matrix.vecMul (A i) (i_basis_point_pert b Ib))
 
 structure LexFeasibleBasis {m : Nat} {n : Fin m}
   {I : Prebasis n}
@@ -475,5 +502,24 @@ theorem lex_feasible_basis_is_feasible {m : Nat} {n : Fin m}
   {A : Matrix (Fin m) (Fin n) Real}
   {b : Fin m → Real}
   {Ib : IBasis A I}
+  -- (hl : m > 0)
   (LFBI : LexFeasibleBasis b Ib)
-  : FeasibleBasisI b Ib := sorry
+  : FeasibleBasisI b Ib := by
+  have := LFBI.pert_feas
+  unfold is_lex_feasible at this
+  apply FeasibleBasisI.mk
+  unfold polyhedron
+  intro i
+  have := this i
+  have := @row_lex_implies_leq (m + 1) _ _ (by simp) this
+  unfold b_pert at this
+  rw [Matrix.of_apply, if_pos] at this
+  · have h1 : Matrix.vecMul (A i) (i_basis_point_pert b Ib) 0
+      = A.mulVec (i_basis_point b Ib) i := by
+      rw [rel_basis_point]
+      unfold Matrix.vecMul
+      unfold Matrix.mulVec
+      simp
+    rw [← h1]
+    exact this
+  · rfl
