@@ -523,3 +523,43 @@ theorem lex_feasible_basis_is_feasible {m : Nat} {n : Fin m}
     rw [← h1]
     exact this
   · rfl
+
+
+theorem col_b_pert  {m : Nat} {n : Fin m}
+  (I : Prebasis n)
+  (j : Fin m)
+  (b : Fin m → Real)
+  : (matrix_of_prebasis (b_pert b) I).transpose
+      ⟨j + 1, by simp⟩ != 0 ↔
+    j ∈ Finset.image I.f Finset.univ := by
+  apply Iff.comm.mp
+  apply Iff.intro
+  · intro h1
+    have h2 := Finset.mem_image.mp h1
+    obtain ⟨i, hi⟩ := h2
+    simp
+    intro h3
+    have h4 : (matrix_of_prebasis (b_pert b) I).transpose
+      ⟨j + 1, by simp⟩ i = -1 := by
+      unfold matrix_of_prebasis b_pert
+        Matrix.transpose row_submx
+      simp [hi.right]
+      rfl
+    have := congrFun h3 i
+    rw [h4] at this
+    simp at this
+  · intro h1
+    simp at h1
+    by_contra h2
+    apply h1
+    unfold matrix_of_prebasis b_pert
+      Matrix.transpose row_submx
+    simp at h2
+    funext x
+    have h3 := h2 x
+    simp
+    intro h4
+    apply h3
+    apply Fin.succ_inj.mp
+    rw [←h4]
+    rfl
