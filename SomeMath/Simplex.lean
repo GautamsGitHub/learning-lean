@@ -30,11 +30,12 @@ structure Prebasis {m : Nat} (n : Fin m) where
 
 def row_submx {m p s : Nat}
   (Q : Matrix (Fin m) (Fin p) Real)
-  (I : (Fin s) → (Fin m))
+  (f : (Fin s) → (Fin m))
   : (Matrix (Fin s) (Fin p) Real) :=
-  Matrix.of (fun (i : Fin s) (j : Fin p) =>
-    Q (I i) j
-  )
+  -- Matrix.of (fun (i : Fin s) (j : Fin p) =>
+  --   Q (I i) j
+  -- )
+  Matrix.of Q ∘ f
 
 def matrix_of_prebasis {m p : Nat} {n : Fin m}
   (Q : Matrix (Fin m) (Fin p) Real)
@@ -408,7 +409,8 @@ noncomputable def i_basis_point_pert {m : Nat} {n : Fin m}
   (Ib : IBasis A I)
   : Matrix (Fin n) (Fin (m + 1)) Real :=
   let bp := b_pert b
-  Ib.bas.invOf * Matrix.of (bp ∘ I.f)
+  -- Ib.bas.invOf * Matrix.of (bp ∘ I.f)
+  Ib.bas.invOf * row_submx bp I.f
 
 theorem rel_basis_point {m : Nat} {n : Fin m}
   {I : Prebasis n}
@@ -563,3 +565,52 @@ theorem col_b_pert  {m : Nat} {n : Fin m}
     apply Fin.succ_inj.mp
     rw [←h4]
     rfl
+
+theorem col_point_of_basis_pert  {m : Nat} {n : Fin m}
+  {A : Matrix (Fin m) (Fin n) Real}
+  {I : @Prebasis m n}
+  (j : Fin m)
+  (b : Fin m → Real)
+  (Ib : IBasis A I)
+  : (i_basis_point_pert b Ib).transpose
+      ⟨j + 1, by simp⟩ != 0 ↔
+    j ∈ Finset.image I.f Finset.univ := by
+    rw [(Iff.comm.mp (col_b_pert I j b))]
+    unfold i_basis_point_pert
+    simp
+    apply not_iff_not.mpr
+    rw [Matrix.mul_apply_eq_vecMul]
+    apply Iff.intro
+    · rw [Matrix.vecMul_transpose]
+      intro h1
+      rw [matrix_of_prebasis]
+      let M := matrix_of_prebasis A I
+      have hminv := Ib.bas
+      let x := ((row_submx (b_pert b) I.f).transpose
+        ⟨(j + 1), by simp⟩)
+      show x = 0
+      rw [
+        ← Matrix.one_mulVec x,
+        ← Matrix.mul_inv_of_invertible M,
+        ← Matrix.mulVec_mulVec,
+        h1,
+        Matrix.mulVec_zero]
+    · intro h1
+      unfold matrix_of_prebasis at h1
+      rw [h1, Matrix.zero_vecMul]
+
+theorem eq_pert_point_imp_eq_bas {m : Nat} {n : Fin m}
+  {A : Matrix (Fin m) (Fin n) Real}
+  {I1 I2 : @Prebasis m n}
+  (b : Fin m → Real)
+  (Ib1 : IBasis A I1)
+  (Ib2 : IBasis A I2)
+  : i_basis_point_pert b Ib1 = i_basis_point_pert b Ib2
+    → Finset.image I1.f (Finset.univ)
+      = Finset.image I2.f (Finset.univ) := by
+    intro hbps
+    ext j
+    rw [
+      ← col_point_of_basis_pert j b Ib1,
+      hbps,
+      col_point_of_basis_pert j b Ib2]
