@@ -421,8 +421,9 @@ theorem rel_basis_point {m : Nat} {n : Fin m}
     fun i => (i_basis_point_pert b Ib) i 0 := by
   funext i
   have h
-    : (Matrix.of (b_pert b ∘ I.f)).transpose 0 =
+    : (row_submx (b_pert b) I.f).transpose 0 =
       b ∘ I.f := by
+    unfold row_submx
     funext i
     rw [
       Matrix.transpose_apply,
@@ -433,7 +434,7 @@ theorem rel_basis_point {m : Nat} {n : Fin m}
     i_basis_point_pert,
     i_basis_point,
     ← Matrix.transpose_apply
-      (Ib.bas.invOf * Matrix.of (b_pert b ∘ I.f)),
+      (Ib.bas.invOf * (row_submx (b_pert b) I.f)),
     Matrix.transpose_mul,
     Matrix.mul_apply_eq_vecMul,
     Matrix.vecMul_transpose,
@@ -614,3 +615,35 @@ theorem eq_pert_point_imp_eq_bas {m : Nat} {n : Fin m}
       ← col_point_of_basis_pert j b Ib1,
       hbps,
       col_point_of_basis_pert j b Ib2]
+
+
+def leaving {m : Nat} {n : Fin m}
+  {A : Matrix (Fin m) (Fin n) Real}
+  {I : @Prebasis m n}
+  (c : Fin n → Real)
+  (Ib : @IBasis m n A I)
+  (i : Fin n)
+  : Prop :=
+  (reduced_cost_of_basis c Ib) i < 0
+
+def infeasible_dir {m : Nat} {n : Fin m}
+  {A : Matrix (Fin m) (Fin n) Real}
+  {I : @Prebasis m n}
+  (Ib : @IBasis m n A I)
+  (i : Fin n)
+  : Prop :=
+  feasible_dir A (direction Ib i) → False
+
+
+noncomputable def lex_gap {m : Nat} {n : Fin m}
+  {A : Matrix (Fin m) (Fin n) Real}
+  {I : @Prebasis m n}
+  (i : Fin n)
+  (j : Fin m)
+  (b : Fin m → Real)
+  (Ib : IBasis A I)
+  : Fin (m + 1) → Real :=
+  let d := direction Ib i
+  let x_pert := i_basis_point_pert b Ib
+  let scale := 1 / A.mulVec d j
+  scale • ((b_pert b j) - (x_pert.vecMul (A j)))
